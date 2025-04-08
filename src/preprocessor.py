@@ -1,41 +1,39 @@
-import pandas as pd
-from sklearn.base import re
+import numpy as np
 from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-import seaborn as sns
-from src.utils import setup_logging, save_plot
+from imblearn.under_sampling import RandomUnderSampler
+import joblib
+import os
 
-logger = setup_logging()
-
-class Preprocessor:
-    def __init__(self, label_column='Label'):
-        self.scaler = StandardScaler()
-        self.top_features = None
-        self.label_column = label_column
-
-    def clean_data(self, df):
-        df_raw = df.copy()
-        df.replace([float('inf'), -float('inf')], pd.NA, inplace=True)
+class DataPreprocessor:
+    def __init__(self, logger):
+        self.logger = logger
+    
+    def preprocess(self, df, label_column='Label'):
+        """Clean and preprocess data."""
+        self.logger.info("Preprocessing data...")
+        
+        # Handle missing/infinite values
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
         df.dropna(inplace=True)
-
-        logger.info(f"Columns in dataset: {list(df.columns)} \n")
-
-        if self.label_column not in df.columns:
-            raise KeyError(f"Column '{self.label_column}' not found in dataset. Available columns: {list(df.columns)}")
-
-        df[self.label_column] = df[self.label_column].apply(lambda x: 0 if x == 'BENIGN' else 1)
-        logger.info(f"Data after cleaning: {df.shape} \n")
-        logger.info(f"Label distribution:\n{df[self.label_column].value_counts()} \n")
-
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        sns.countplot(x=self.label_column, data=df_raw, ax=ax1)
-        ax1.set_title("Label Distribution (Raw Data)")
-        sns.countplot(x=self.label_column, data=df, ax=ax2)
-        ax2.set_title("Label Distribution (Cleaned Data)")
-        save_plot(fig, "label_distribution.png")
-
+        
+        # Binary encoding
+        df[label_column] = df[label_column].apply(lambda x: 0 if x == 'BENIGN' else 1)
+        
         return df
-
-    def preprocess(self, df):
-        df = self.clean_data(df)
-        return df
+    
+    def scale_features(self, X_train, X_test):
+        """Scale features using StandardScaler."""
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        
+        os.makedirs('./models', exist_ok=True)
+        joblib.dump(scaler, './models/scaler.pkl')
+        
+        return X_train_scaled, X_test_scaled
+    
+    def balance_data(self, X, y):
+        """Balance dataset using undersampling."""
+        sampler = RandomUnderSampler(random_state=42)
+        X_balanced, y_balanced = sampler.fit_resample(X, y)
+        return X_balanced, y_balanced
