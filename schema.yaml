@@ -1,0 +1,21 @@
+- name: len_target
+  type: len_target
+  param_hint: null
+
+- name: num_special_chars
+  type: num_special
+  param_hint: null
+
+- name: arg_entropy_user
+  type: entropy
+  param_hint: user
+
+- name: arg_entropy_pass
+  type: entropy
+  param_hint: pass
+
+- name: num_params
+  type: num_params
+  param_hint: null
+
+# ... continue until 80 total ...
